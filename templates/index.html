@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Meridian — Research Navigator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Playfair+Display+SC:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #fdf8f1;
+      --white:       #fffcf6;
+      --orange:      #c04e14;
+      --orange-mid:  #d4622a;
+      --orange-pale: #fbeee5;
+      --amber:       #c8900a;
+      --brown:       #3e1c08;
+      --brown-mid:   #7a4820;
+      --brown-muted: #a07248;
+      --border:      #ddc8a4;
+      --border-soft: #eedcbf;
+      --tan:         #c4a070;
+      --green:       #3d6e2a;
+      --text:        #2a1206;
+      --text-mid:    #644020;
+      --text-muted:  #ac8660;
+      --display:     'Playfair Display', Georgia, serif;
+      --sc:          'Playfair Display SC', Georgia, serif;
+      --body:        'Cormorant Garamond', Georgia, serif;
+      --mono:        'Courier Prime', monospace;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background-color: var(--bg);
+      /* dot grid — old academic graph paper feel */
+      background-image: radial-gradient(rgba(194,90,30,0.09) 1.5px, transparent 1.5px);
+      background-size: 28px 28px;
+      color: var(--text);
+      font-family: var(--body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* warm vignette edges */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 0% 0%, rgba(200,130,60,0.09) 0%, transparent 55%),
+        radial-gradient(ellipse at 100% 100%, rgba(190,80,20,0.07) 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── App shell ───────────────────────────────────────────────── */
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 2.5rem 5rem;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .site-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3.5rem 0 2.5rem;
+      text-align: center;
+    }
+
+    /* Compass rose decoration */
+    .compass {
+      margin-bottom: 1.4rem;
+      animation: compass-spin 40s linear infinite;
+    }
+
+    @keyframes compass-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .site-header h1 {
+      font-family: var(--display);
+      font-weight: 900;
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      letter-spacing: 0.06em;
+      line-height: 1;
+      color: var(--brown);
+    }
+
+    .site-header h1 em {
+      font-style: italic;
+      color: var(--orange);
+    }
+
+    .site-header .sub {
+      font-family: var(--mono);
+      font-size: 0.64rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 0.9rem;
+    }
+
+    .header-rule {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    .header-rule span { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--tan), transparent); }
+
+    /* ── Views container ─────────────────────────────────────────── */
+    .views-wrap {
+      position: relative;
+    }
+
+    .view {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 1rem 3rem;
+      min-height: 52vh;
+      opacity: 0;
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+
+    .view.active {
+      display: flex;
+      opacity: 1;
+      transform: translateY(0) !important;
+    }
+
+    /* ── Step question ───────────────────────────────────────────── */
+    .step-count {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+    .step-q {
+      font-family: var(--display);
+      font-size: clamp(1.7rem, 3.5vw, 2.6rem);
+      font-style: italic;
+      font-weight: 400;
+      color: var(--brown);
+      text-align: center;
+      line-height: 1.25;
+      max-width: 560px;
+      margin-bottom: 2.4rem;
+    }
+
+    .step-q strong {
+      font-style: normal;
+      font-weight: 900;
+      color: var(--orange);
+    }
+
+    /* ── Inputs ──────────────────────────────────────────────────── */
+    .step-input-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 2.2rem;
+    }
+
+    .step-input {
+      width: 100%;
+      background: var(--white);
+      border: none;
+      border-bottom: 2px solid var(--border);
+      color: var(--text);
+      font-family: var(--display);
+      font-size: 1.6rem;
+      font-weight: 400;
+      font-style: italic;
+      padding: 0.6rem 0.2rem 0.6rem 0;
+      outline: none;
+      transition: border-color 0.3s;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    .step-input::placeholder {
+      color: var(--border);
+      font-style: italic;
+    }
+
+    .step-input:focus {
+      border-bottom-color: var(--orange);
+    }
+
+    /* animated underline cursor */
+    .input-cursor {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 0;
+      background: var(--orange);
+      transition: width 0.35s ease;
+    }
+
+    .step-input:focus ~ .input-cursor {
+      width: 100%;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    .step-btn {
+      font-family: var(--sc);
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      padding: 0.9rem 3rem;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .btn-primary {
+      background: var(--orange);
+      color: #fff9f0;
+      border: none;
+      box-shadow: 0 3px 18px rgba(192,78,20,0.25);
+    }
+
+    .btn-primary:hover {
+      background: var(--orange-mid);
+      box-shadow: 0 5px 28px rgba(192,78,20,0.38);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-primary:disabled {
+      background: var(--tan);
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--brown-muted);
+      border: 1px solid var(--border);
+      margin-right: 1rem;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--tan);
+      color: var(--brown-mid);
+    }
+
+    .step-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+    }
+
+    /* ── Step dots ───────────────────────────────────────────────── */
+    .step-dots {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 2rem;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.3s, transform 0.3s;
+    }
+
+    .dot.active {
+      background: var(--orange);
+      transform: scale(1.3);
+    }
+
+    /* ── Loading view ────────────────────────────────────────────── */
+    #view-loading {
+      gap: 0;
+    }
+
+    .loading-title {
+      font-family: var(--display);
+      font-size: clamp(1.4rem, 3vw, 2.2rem);
+      font-style: italic;
+      color: var(--brown);
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .loading-sub {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    /* ── Pipeline ────────────────────────────────────────────────── */
+    .pipeline {
+      display: flex;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .pipe-step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.45rem;
+      position: relative;
+    }
+
+    .pipe-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 1.15rem;
+      left: calc(50% + 1.5rem);
+      right: calc(-50% + 1.5rem);
+      height: 1px;
+      background: var(--border-soft);
+      z-index: 0;
+      transition: background 0.5s;
+    }
+
+    .pipe-step.done:not(:last-child)::after {
+      background: linear-gradient(90deg, var(--tan), var(--border-soft));
+    }
+
+    .pipe-n {
+      width: 2.4rem;
+      height: 2.4rem;
+      border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 0.85rem;
+      color: var(--brown-muted);
+      position: relative;
+      z-index: 1;
+      transition: all 0.35s;
+    }
+
+    .pipe-step.running .pipe-n {
+      border-color: var(--orange);
+      color: var(--orange);
+      background: var(--orange-pale);
+      animation: breathe 1.3s ease-in-out infinite;
+    }
+
+    .pipe-step.done .pipe-n {
+      border-color: var(--green);
+      color: var(--green);
+      background: #f1f7ed;
+    }
+
+    @keyframes breathe {
+      0%,100% { box-shadow: 0 0 0 3px rgba(192,78,20,0.12); }
+      50%      { box-shadow: 0 0 0 8px rgba(192,78,20,0.05); }
+    }
+
+    .pipe-lbl {
+      font-family: var(--sc);
+      font-size: 0.56rem;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      text-align: center;
+      transition: color 0.3s;
+    }
+
+    .pipe-step.running .pipe-lbl { color: var(--orange); }
+    .pipe-step.done    .pipe-lbl { color: var(--green);  }
+
+    .pipe-msg {
+      font-family: var(--mono);
+      font-size: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--border);
+      min-height: 0.8em;
+      transition: color 0.3s;
+    }
+
+    .pipe-step.running .pipe-msg { color: var(--orange-mid); }
+    .pipe-step.done    .pipe-msg { color: var(--green); }
+
+    /* ── Results view ────────────────────────────────────────────── */
+    #view-results {
+      align-items: stretch;
+      padding-top: 2rem;
+    }
+
+    .results-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .results-header h2 {
+      font-family: var(--display);
+      font-size: 1.6rem;
+      font-style: italic;
+      color: var(--brown);
+    }
+
+    .results-meta {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.15em;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+
+    .results-meta strong {
+      color: var(--orange);
+      font-weight: 700;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.4rem;
+      width: 100%;
+    }
+
+    @media (max-width: 680px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .new-search-btn {
+      display: block;
+      margin: 2.2rem auto 0;
+      font-family: var(--sc);
+      font-size: 0.65rem;
+      letter-spacing: 0.18em;
+      padding: 0.7rem 2.2rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--brown-muted);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .new-search-btn:hover {
+      border-color: var(--orange);
+      color: var(--orange);
+    }
+
+    /* ── Result Panels ───────────────────────────────────────────── */
+    .result-panel {
+      background: var(--white);
+      border: 1px solid var(--border-soft);
+      border-top: 3px solid var(--border-soft);
+      border-radius: 3px;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.5s ease, transform 0.5s ease, border-top-color 0.4s, box-shadow 0.3s;
+    }
+
+    .result-panel.visible {
+      opacity: 1;
+      transform: translateY(0);
+      box-shadow: 0 3px 24px rgba(60,20,5,0.09);
+    }
+
+    .result-panel:hover {
+      box-shadow: 0 6px 32px rgba(60,20,5,0.13);
+    }
+
+    #panel-background.visible  { border-top-color: var(--orange); }
+    #panel-curriculum.visible  { border-top-color: #7a5218; }
+    #panel-research.visible    { border-top-color: var(--green); }
+    #panel-papers.visible      { border-top-color: #7a3855; }
+
+    .panel-hd {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 0.9rem 1.2rem 0.7rem;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .panel-title {
+      font-family: var(--sc);
+      font-size: 0.68rem;
+      letter-spacing: 0.16em;
+      color: var(--brown);
+    }
+
+    .panel-tag {
+      font-family: var(--mono);
+      font-size: 0.53rem;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      border: 1px solid var(--border-soft);
+      padding: 0.1rem 0.45rem;
+      border-radius: 2px;
+    }
+
+    .panel-body {
+      padding: 1.1rem 1.2rem;
+      min-height: 150px;
+    }
+
+    /* Skeleton */
+    .skel {
+      height: 0.68rem;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--border-soft) 25%, var(--bg) 50%, var(--border-soft) 75%);
+      background-size: 300% 100%;
+      animation: shimmer 1.7s ease infinite;
+      margin-bottom: 0.65rem;
+    }
+    .skel:nth-child(2) { width: 80%; }
+    .skel:nth-child(3) { width: 90%; }
+    .skel:nth-child(4) { width: 65%; }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Knowledge text */
+    .knowledge-text {
+      font-family: var(--body);
+      font-size: 0.92rem;
+      font-weight: 300;
+      line-height: 1.82;
+      color: var(--text-mid);
+      max-height: 320px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      padding-right: 0.4rem;
+    }
+
+    .knowledge-text strong { color: var(--orange); font-weight: 700; font-style: italic; }
+
+    /* Course list */
+    .course-list { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .course-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid var(--border-soft);
+      border-radius: 2px;
+      background: var(--bg);
+      transition: background 0.2s, border-color 0.2s;
+      animation: fadein 0.35s ease both;
+    }
+
+    .course-item:hover { background: var(--white); border-color: var(--tan); }
+
+    @keyframes fadein { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
+    .course-num {
+      font-family: var(--display);
+      font-style: italic;
+      font-size: 0.72rem;
+      color: var(--tan);
+      flex-shrink: 0;
+      min-width: 1.2rem;
+      padding-top: 0.08rem;
+    }
+
+    .course-name {
+      font-family: var(--body);
+      font-size: 0.9rem;
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    /* Trend pills */
+    .trend-cloud { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    .trend-pill {
+      font-family: var(--mono);
+      font-size: 0.64rem;
+      letter-spacing: 0.07em;
+      color: var(--brown-mid);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 0.28rem 0.72rem;
+      border-radius: 20px;
+      animation: popin 0.3s ease both;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .trend-pill:hover { background: var(--orange-pale); border-color: var(--orange); color: var(--orange); }
+
+    @keyframes popin { from { opacity: 0; transform: scale(0.72); } to { opacity: 1; transform: scale(1); } }
+
+    /* Paper cards */
+    .paper-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+    .paper-card {
+      display: block;
+      text-decoration: none;
+      padding: 0.62rem 0.85rem;
+      border: 1px solid var(--border-soft);
+      border-left: 3px solid var(--tan);
+      border-radius: 2px;
+      background: var(--bg);
+      animation: fadein 0.35s ease both;
+      transition: border-left-color 0.2s, background 0.2s, transform 0.2s;
+    }
+
+    .paper-card:hover { border-left-color: var(--orange); background: var(--white); transform: translateX(3px); }
+
+    .paper-title { display: block; font-family: var(--body); font-size: 0.86rem; color: var(--text); line-height: 1.5; margin-bottom: 0.18rem; }
+
+    .paper-src { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.07em; color: var(--brown-muted); text-transform: uppercase; }
+
+    /* Error */
+    .error-msg {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: #8a1c1c;
+      background: #fdf1f1;
+      border: 1px solid #e4b0b0;
+      border-radius: 3px;
+      padding: 0.75rem 1rem;
+      text-align: center;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    /* Footer */
+    .site-footer {
+      text-align: center;
+      padding: 3rem 0 1.5rem;
+    }
+
+    .footer-rule {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin-bottom: 1.4rem;
+    }
+
+    .site-footer p {
+      font-family: var(--mono);
+      font-size: 0.56rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ── Header ────────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <!-- Compass rose SVG -->
+    <svg class="compass" width="38" height="38" viewBox="0 0 38 38" fill="none" opacity="0.55">
+      <circle cx="19" cy="19" r="18" stroke="#c4a070" stroke-width="0.8"/>
+      <circle cx="19" cy="19" r="13" stroke="#c4a070" stroke-width="0.5" stroke-dasharray="2 3"/>
+      <path d="M19 2 L20.4 16 L19 19 L17.6 16 Z" fill="#c04e14" opacity="0.9"/>
+      <path d="M19 36 L20.4 22 L19 19 L17.6 22 Z" fill="#c4a070" opacity="0.7"/>
+      <path d="M2 19 L16 17.6 L19 19 L16 20.4 Z" fill="#c4a070" opacity="0.7"/>
+      <path d="M36 19 L22 17.6 L19 19 L22 20.4 Z" fill="#c4a070" opacity="0.7"/>
+      <circle cx="19" cy="19" r="2" fill="#c04e14" opacity="0.8"/>
+      <text x="19" y="8.5" text-anchor="middle" font-family="Playfair Display, serif" font-size="4" fill="#c4a070" font-style="italic">N</text>
+    </svg>
+
+    <h1>Meridi<em>an</em></h1>
+    <p class="sub">Navigate the landscape of knowledge</p>
+
+    <div class="header-rule">
+      <span></span>
+      <svg width="10" height="10" viewBox="0 0 10 10">
+        <path d="M5 0L6.2 3.8L10 5L6.2 6.2L5 10L3.8 6.2L0 5L3.8 3.8Z" fill="#c4a070"/>
+      </svg>
+      <span></span>
+    </div>
+  </header>
+
+  <!-- ── Views ──────────────────────────────────────────────────────── -->
+  <div class="views-wrap">
+
+    <!-- Step 1: Background -->
+    <div class="view active" id="view-1">
+      <div class="step-count">Step 01 of 02</div>
+      <p class="step-q">What is your academic<br><strong>background?</strong></p>
+      <div class="step-input-wrap">
+        <input class="step-input" id="inp-bg" type="text" placeholder="e.g. Mechanical Engineering" autocomplete="off" />
+        <div class="input-cursor"></div>
+      </div>
+      <div class="step-actions">
+        <button class="step-btn btn-primary" id="btn-next">Continue &nbsp;→</button>
+      </div>
+      <div class="error-msg" id="err-1"></div>
+      <div class="step-dots">
+        <div class="dot active" id="dot-1"></div>
+        <div class="dot"        id="dot-2"></div>
+      </div>
+    </div>
+
+    <!-- Step 2: Target -->
+    <div class="view" id="view-2">
+      <div class="step-count">Step 02 of 02</div>
+      <p class="step-q">Where do you want<br>to <strong>explore?</strong></p>
+      <div class="step-input-wrap">
+        <input class="step-input" id="inp-target" type="text" placeholder="e.g. Biophysics" autocomplete="off" />
+        <div class="input-cursor"></div>
+      </div>
+      <div class="step-actions">
+        <button class="step-btn btn-ghost" id="btn-back">← Back</button>
+        <button class="step-btn btn-primary" id="btn-go">Chart Course</button>
+      </div>
+      <div class="error-msg" id="err-2"></div>
+      <div class="step-dots">
+        <div class="dot"       id="dot-1b"></div>
+        <div class="dot active" id="dot-2b"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Loading -->
+    <div class="view" id="view-loading">
+      <p class="loading-title" id="loading-msg">Charting your course…</p>
+      <p class="loading-sub" id="loading-sub">Initialising agents</p>
+      <div class="pipeline" style="margin-top:2.8rem">
+        <div class="pipe-step" id="pipe-background">
+          <div class="pipe-n">I</div>
+          <span class="pipe-lbl">Background</span>
+          <span class="pipe-msg">—</span>
+        </div>
+        <div class="pipe-step" id="pipe-curriculum">
+          <div class="pipe-n">II</div>
+          <span class="pipe-lbl">Curriculum</span>
+          <span class="pipe-msg">—</span>
+        </div>
+        <div class="pipe-step" id="pipe-research">
+          <div class="pipe-n">III</div>
+          <span class="pipe-lbl">Trends</span>
+          <span class="pipe-msg">—</span>
+        </div>
+        <div class="pipe-step" id="pipe-papers">
+          <div class="pipe-n">IV</div>
+          <span class="pipe-lbl">Papers</span>
+          <span class="pipe-msg">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Results -->
+    <div class="view" id="view-results">
+      <div class="results-header">
+        <h2>Your Research Roadmap</h2>
+        <p class="results-meta" id="results-meta"></p>
+      </div>
+
+      <div class="results-grid">
+        <div class="result-panel" id="panel-background">
+          <div class="panel-hd">
+            <span class="panel-title">Knowledge Gap Analysis</span>
+            <span class="panel-tag">LLM</span>
+          </div>
+          <div class="panel-body" id="body-background">
+            <div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>
+          </div>
+        </div>
+
+        <div class="result-panel" id="panel-curriculum">
+          <div class="panel-hd">
+            <span class="panel-title">Course Prerequisites</span>
+            <span class="panel-tag">IISc</span>
+          </div>
+          <div class="panel-body" id="body-curriculum">
+            <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+          </div>
+        </div>
+
+        <div class="result-panel" id="panel-research">
+          <div class="panel-hd">
+            <span class="panel-title">Research Trends</span>
+            <span class="panel-tag">arXiv</span>
+          </div>
+          <div class="panel-body" id="body-research">
+            <div class="skel"></div><div class="skel"></div>
+          </div>
+        </div>
+
+        <div class="result-panel" id="panel-papers">
+          <div class="panel-hd">
+            <span class="panel-title">Recommended Papers</span>
+            <span class="panel-tag">arXiv</span>
+          </div>
+          <div class="panel-body" id="body-papers">
+            <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="new-search-btn" id="btn-new">← New Search</button>
+    </div>
+
+  </div><!-- /views-wrap -->
+
+  <footer class="site-footer">
+    <div class="footer-rule"></div>
+    <p>Meridian &nbsp;·&nbsp; Indian Institute of Science &nbsp;·&nbsp; 2025</p>
+  </footer>
+
+</div>
+
+<!-- ── Script ──────────────────────────────────────────────────────── -->
+<script>
+  // ── View transitions ────────────────────────────────────────────
+  let currentView = 'view-1';
+
+  function showView(id, fromId) {
+    const from = fromId ? document.getElementById(fromId) : null;
+    const next = document.getElementById(id);
+
+    if (from) {
+      from.style.opacity = '0';
+      from.style.transform = 'translateY(-14px)';
+      setTimeout(() => {
+        from.style.display = 'none';
+        from.classList.remove('active');
+        from.style.opacity = '';
+        from.style.transform = '';
+      }, 420);
+    }
+
+    setTimeout(() => {
+      next.style.display = 'flex';
+      next.style.opacity = '0';
+      next.style.transform = 'translateY(20px)';
+      next.offsetHeight;
+      next.style.transition = 'opacity 0.45s ease, transform 0.45s ease';
+      next.style.opacity = '1';
+      next.style.transform = 'translateY(0)';
+      next.classList.add('active');
+      currentView = id;
+
+      // auto-focus input
+      const inp = next.querySelector('input');
+      if (inp) setTimeout(() => inp.focus(), 460);
+    }, from ? 200 : 0);
+  }
+
+  // ── Navigation ──────────────────────────────────────────────────
+  let savedBg = '';
+
+  document.getElementById('btn-next').addEventListener('click', () => {
+    const bg = document.getElementById('inp-bg').value.trim();
+    if (!bg) { showErr('err-1', 'Please describe your background.'); return; }
+    hideErr('err-1');
+    savedBg = bg;
+    showView('view-2', 'view-1');
+  });
+
+  document.getElementById('inp-bg').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-next').click();
+  });
+
+  document.getElementById('btn-back').addEventListener('click', () => {
+    showView('view-1', 'view-2');
+  });
+
+  document.getElementById('btn-go').addEventListener('click', startNav);
+
+  document.getElementById('inp-target').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startNav();
+  });
+
+  document.getElementById('btn-new').addEventListener('click', () => {
+    resetPipeline();
+    resetPanels();
+    document.getElementById('inp-bg').value = '';
+    document.getElementById('inp-target').value = '';
+    showView('view-1', 'view-results');
+  });
+
+  // ── Main navigation call ─────────────────────────────────────────
+  let ctrl = null;
+
+  function startNav() {
+    const target = document.getElementById('inp-target').value.trim();
+    if (!target) { showErr('err-2', 'Please enter your target field.'); return; }
+    hideErr('err-2');
+
+    const background = savedBg;
+
+    // Update results meta
+    document.getElementById('results-meta').innerHTML =
+      `<strong>${esc(background)}</strong> &nbsp;→&nbsp; <strong>${esc(target)}</strong>`;
+
+    showView('view-loading', 'view-2');
+
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+
+    fetch('/api/navigate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ background, target }),
+      signal: ctrl.signal,
+    }).then(res => {
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+
+      function pump() {
+        return reader.read().then(({ value, done }) => {
+          if (done) return;
+          buf += dec.decode(value, { stream: true });
+          const parts = buf.split('\n\n');
+          buf = parts.pop();
+          for (const p of parts) {
+            if (p.startsWith('data: ')) {
+              try { onEvent(JSON.parse(p.slice(6))); } catch (_) {}
+            }
+          }
+          return pump();
+        });
+      }
+      return pump();
+    }).catch(err => {
+      if (err.name !== 'AbortError') {
+        document.getElementById('loading-msg').textContent = 'Something went wrong.';
+        document.getElementById('loading-sub').textContent = err.message;
+      }
+    });
+  }
+
+  // ── SSE event handler ────────────────────────────────────────────
+  const stepMessages = {
+    background: 'Analysing your knowledge gaps…',
+    curriculum: 'Mapping course prerequisites…',
+    research:   'Scanning the research landscape…',
+    papers:     'Selecting key papers…',
+  };
+
+  function onEvent({ step, status, data }) {
+    if (step === 'complete') {
+      showView('view-results', 'view-loading');
+      return;
+    }
+
+    if (step === 'error') {
+      document.getElementById('loading-msg').textContent = 'Error encountered.';
+      document.getElementById('loading-sub').textContent = data || '';
+      return;
+    }
+
+    const pipeEl = document.getElementById('pipe-' + step);
+    const msgEl  = pipeEl && pipeEl.querySelector('.pipe-msg');
+
+    if (status === 'running') {
+      pipeEl && pipeEl.classList.add('running');
+      if (msgEl) msgEl.textContent = 'processing';
+      document.getElementById('loading-sub').textContent = stepMessages[step] || '';
+      return;
+    }
+
+    if (status === 'done') {
+      pipeEl && pipeEl.classList.remove('running');
+      pipeEl && pipeEl.classList.add('done');
+      if (msgEl) msgEl.textContent = 'done';
+      renderPanel(step, data);
+    }
+  }
+
+  // ── Render panels ────────────────────────────────────────────────
+  function renderPanel(step, data) {
+    const panel = document.getElementById('panel-' + step);
+    const body  = document.getElementById('body-'  + step);
+    if (!panel || !body) return;
+
+    panel.classList.add('visible');
+
+    if (step === 'background') {
+      body.innerHTML = `<div class="knowledge-text">${fmt(data)}</div>`;
+    }
+
+    if (step === 'curriculum') {
+      const lines = data.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+      body.innerHTML = `<ul class="course-list">${
+        lines.map((l, i) => `<li class="course-item" style="animation-delay:${i * 0.07}s">
+          <span class="course-num">${i + 1}.</span>
+          <span class="course-name">${esc(l)}</span>
+        </li>`).join('')
+      }</ul>`;
+    }
+
+    if (step === 'research') {
+      body.innerHTML = `<div class="trend-cloud">${
+        data.map((k, i) => `<span class="trend-pill" style="animation-delay:${i * 0.06}s">${esc(k)}</span>`).join('')
+      }</div>`;
+    }
+
+    if (step === 'papers') {
+      body.innerHTML = `<div class="paper-list">${
+        data.map((p, i) => {
+          const tag = p.link ? 'a' : 'div';
+          const attrs = p.link ? ` href="${esc(p.link)}" target="_blank" rel="noopener"` : '';
+          return `<${tag} class="paper-card"${attrs} style="animation-delay:${i * 0.08}s">
+            <span class="paper-title">${esc(p.title)}</span>
+            ${p.link ? `<span class="paper-src">arxiv.org →</span>` : ''}
+          </${tag}>`;
+        }).join('')
+      }</div>`;
+    }
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  function resetPipeline() {
+    ['background','curriculum','research','papers'].forEach(s => {
+      const el = document.getElementById('pipe-' + s);
+      if (el) { el.classList.remove('running','done'); el.querySelector('.pipe-msg').textContent = '—'; }
+    });
+    document.getElementById('loading-msg').textContent = 'Charting your course…';
+    document.getElementById('loading-sub').textContent = 'Initialising agents';
+  }
+
+  function resetPanels() {
+    ['background','curriculum','research','papers'].forEach(s => {
+      const panel = document.getElementById('panel-' + s);
+      const body  = document.getElementById('body-'  + s);
+      if (panel) panel.classList.remove('visible');
+      if (body)  body.innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+    });
+  }
+
+  function fmt(raw) {
+    return esc(raw).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showErr(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.style.display = 'block'; }
+  function hideErr(id)      { document.getElementById(id).style.display = 'none'; }
+
+  // Focus first input on load
+  setTimeout(() => document.getElementById('inp-bg').focus(), 300);
+</script>
+</body>
+</html>
